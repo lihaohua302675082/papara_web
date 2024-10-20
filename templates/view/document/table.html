@@ -44,6 +44,13 @@
 							<input type="text" name="devicedids" placeholder="" class="layui-input">
 						</div>
 					</div>
+					<div class="layui-input-inline">
+						<select name="enable" id="enable" lay-verify="">
+							<option value="">全部</option>
+							<option value="1">已使用</option>
+							<option value="0">未使用</option>
+						</select>
+        			</div>
 					<div class="layui-inline" style="margin-left: 50px;">
 						<button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="user-query">
 							<i class="layui-icon layui-icon-search"></i>
@@ -308,9 +315,36 @@
 				return false;
 			});
 
-			form.on('switch(user-enable)', function (obj) {
-				layer.tips(this.value + ' ' + this.name + '：' + obj.elem.checked, obj.othis);
-			});
+    // 监听 switch 开关事件
+    form.on('switch(user-enable)', function(obj) {
+        let trElem = $(obj.elem).closest('tr');  // 获取当前开关所在的行（tr 元素）
+        let index = trElem.attr('data-index');   // 获取行的索引值
+        let rowData = table.cache['user-table'][index];  // 通过索引值获取当前行的完整数据
+
+        let number = rowData.id;  // 获取当前行的 number 值
+        let enable_status = obj.elem.checked ? 1 : 0;  // 获取开关状态
+
+        // 发送 AJAX 请求，更新状态
+        $.ajax({
+            url: '/update_device_status',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                id: number,     // 传递卡号（number）
+                enable: enable_status  // 传递启用状态
+            }),
+            success: function (result) {
+                if (result.success) {
+                    layer.msg('设备状态已更新', { icon: 1, time: 1000 });
+                } else {
+                    layer.msg('更新失败: ' + result.msg, { icon: 2, time: 2000 });
+                }
+            },
+            error: function (xhr, status, error) {
+                layer.msg('请求失败: ' + error, { icon: 2, time: 2000 });
+            }
+        });
+    });
 
 			// window.add = function () {
 			// 	drawer.open({

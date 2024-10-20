@@ -159,7 +159,36 @@
 
 
 			form.on('switch(user-enable)', function (obj) {
+				// 显示提示信息
 				layer.tips(this.value + ' ' + this.name + '：' + obj.elem.checked, obj.othis);
+
+				// 获取设备 ID 和启用状态
+				let trElem = $(obj.elem).closest('tr');  // 获取当前开关所在的行（tr 元素）
+				let index = trElem.attr('data-index');   // 获取行的索引值
+				let rowData = table.cache['user-table'][index];  // 通过索引值获取当前行的完整数据
+
+				let number = rowData.number;  // 获取当前行的 number 值
+				let enable_status = obj.elem.checked ? 1 : 0;  // 获取开关状态
+				// 发送 AJAX 请求更新状态
+				$.ajax({
+					url: '/update_card_status',  // 服务器端处理更新请求的接口
+					type: 'POST',
+					contentType: 'application/json',
+					data: JSON.stringify({
+						number: number,
+						enable: enable_status
+					}),
+					success: function (result) {
+						if (result.success) {
+							layer.msg('卡片状态已更新', { icon: 1, time: 1000 });
+						} else {
+							layer.msg('更新失败: ' + result.msg, { icon: 2, time: 2000 });
+						}
+					},
+					error: function (xhr, status, error) {
+						layer.msg('请求失败: ' + error, { icon: 2, time: 2000 });
+					}
+				});
 			});
 
 			// window.add = function () {

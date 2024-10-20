@@ -8,16 +8,12 @@ from sqlalchemy.exc import NoResultFound
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'your_secret_key'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:isIris82745506@database-2.cxmisosi48au.ap-southeast-2.rds.amazonaws.com/papara?charset=utf8mb4'  # 示例数据库
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/test?charset=utf8mb4'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:isIris82745506@database-2.cxmisosi48au.ap-southeast-2.rds.amazonaws.com/papara?charset=utf8mb4'  # 示例数据库
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/test?charset=utf8mb4'
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'  # 设置登录视图
 db = SQLAlchemy(app)
-proxies = {
-    "http": "http://127.0.0.1:7890",  # 根据你的 Clash 配置修改
-    "https": "http://127.0.0.1:7890",
 
-}
 
 # 登录管理器，加载用户
 
@@ -127,8 +123,7 @@ def get_header(device, token):
     result = requests.post(
         'https://api.papara.com/login/mobilelogin',
         data=datas,
-        headers=headers,
-        proxies=proxies)
+        headers=headers)
     if result.status_code == 200:
         data = result.json()
         access_token = data['data']['access_token']
@@ -142,8 +137,7 @@ def get_detail(device, token,file_name):
 
     result = requests.get(
         'https://api.papara.com/balance',
-        headers=headers,
-        proxies=proxies)
+        headers=headers )
 
     if result.status_code == 200:
         data = result.json()
@@ -154,8 +148,7 @@ def get_detail(device, token,file_name):
     result = requests.post(
         'https://api.papara.com/user/ledgers',
         data=data,
-        headers=headers,
-        proxies=proxies)
+        headers=headers )
     if result.status_code == 200:
         data = result.json()
         lasttime = data['data']['items'][0]['createdAt']
@@ -163,16 +156,14 @@ def get_detail(device, token,file_name):
 
     result = requests.get(
             url='https://api.papara.com/user/accountdetails/0',
-            headers=headers,
-        proxies=proxies)
+            headers=headers )
     if result.status_code == 200:
         data = result.json()
         limit = data['data']['remainingDefinedLimit']
 
     result = requests.get(
         'https://api.papara.com/paparacard/cards',
-        headers=headers,
-        proxies=proxies)
+        headers=headers )
     if result.status_code == 200:
         data = result.json()
         ids = [card['id'] for card in data['data']]
@@ -180,8 +171,7 @@ def get_detail(device, token,file_name):
             url=f"https://api.papara.com/paparacard/{card_id}"
             result = requests.get(
                     url=url,
-                    headers=headers,
-        proxies=proxies)
+                    headers=headers )
             data = result.json()
             # 提取 cardNumber, expiryMonth, expiryYear 和 cvv
             card_number = data['data']['cardNumber']
@@ -197,8 +187,7 @@ def get_detail(device, token,file_name):
             result = requests.post(
                     url='https://api.papara.com/user/ledgers',
                     headers=headers,
-                    data=data,
-        proxies=proxies)
+                    data=data )
             data = result.json()
             last_deal_data=data['data']['items'][0]['createdAt']
 
@@ -236,8 +225,7 @@ def updata_balance(device_id, header):
     account = Balance.query.filter_by(device_id=device_id).first()
     result = requests.get(
         'https://api.papara.com/balance',
-        headers=header,
-        proxies=proxies)
+        headers=header )
     if result.status_code == 200:
         data = result.json()
         totalBalance = data['data']['balances'][0]['totalBalance']
@@ -500,8 +488,7 @@ def send_post_request(acsTransID, device_id, user):
         result = requests.post(
             'https://api.papara.com/acs/challengeresult',
             headers=headers,
-            json=json_data,
-        proxies=proxies)
+            json=json_data )
 
         if result.status_code == 200:
             message = f"成功发送POST请求，AcsTransID: {acsTransID}，Device ID: {device_id}，User: {user}"
@@ -667,8 +654,7 @@ def refresh_card():
 
     result = requests.get(
         'https://api.papara.com/paparacard/cards',
-        headers=headers,
-        proxies=proxies)
+        headers=headers )
     if result.status_code == 200:
         data = result.json()
         ids = [card['id'] for card in data['data']]
@@ -676,8 +662,7 @@ def refresh_card():
             url=f"https://api.papara.com/paparacard/{card_id}"
             result = requests.get(
                     url=url,
-                    headers=headers,
-        proxies=proxies)
+                    headers=headers )
             data = result.json()
             status=data['data']['status']
             if status==9:
@@ -688,8 +673,7 @@ def refresh_card():
             result = requests.post(
                     url='https://api.papara.com/user/ledgers',
                     headers=headers,
-                    data=data,
-        proxies=proxies)
+                    data=data )
             data = result.json()
             last_deal_data=data['data']['items'][0]['createdAt']
             existing_card=cards.query.filter_by(card_id=card_id).first()
@@ -714,8 +698,7 @@ def refresh_account():
 
     result = requests.get(
         'https://api.papara.com/balance',
-        headers=headers,
-        proxies=proxies)
+        headers=headers )
 
     if result.status_code == 200:
         data = result.json()
@@ -725,8 +708,7 @@ def refresh_account():
     result = requests.post(
         'https://api.papara.com/user/ledgers',
         data=data,
-        headers=headers,
-        proxies=proxies)
+        headers=headers )
     if result.status_code == 200:
         data = result.json()
         lasttime = data['data']['items'][0]['createdAt']
@@ -734,8 +716,7 @@ def refresh_account():
 
     result = requests.get(
             url='https://api.papara.com/user/accountdetails/0',
-            headers=headers,
-        proxies=proxies)
+            headers=headers )
     if result.status_code == 200:
         data = result.json()
         limit = data['data']['remainingDefinedLimit']
@@ -831,8 +812,7 @@ def update_card_status():
             result = requests.post(
                 'https://api.papara.com/paparacard/settings/enabled',
                 headers=headers,
-                data=data,
-                proxies=proxies)
+                data=data)
             if result.status_code == 200:
                 card_record.enable = enable  # 更新启用状态
                 db.session.commit()
