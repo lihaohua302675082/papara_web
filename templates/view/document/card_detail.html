@@ -23,6 +23,10 @@
 				<i class="layui-icon layui-icon-refresh-1"></i>
 				刷新时间
 			</button>
+					<button class="pear-btn pear-btn-primary pear-btn-md" lay-event="deal">
+				<i class="layui-icon layui-icon-refresh-1"></i>
+				3DS
+			</button>
 
 	</script>
 <body class="pear-container">
@@ -139,6 +143,8 @@
 					window.detail();
 				}else if (obj.event === 'refresh_data') {
 					window.refresh_data(obj);
+				}else if (obj.event === 'deal') {
+					window.deal(obj);
 				}
 
 			});
@@ -154,6 +160,8 @@
 					window.refresh_data(obj);
 				}else if (obj.event === 'detail') {
 					window.detail(obj);
+				}else if (obj.event === 'deal') {
+					window.deal(obj);
 				}
 			});
 
@@ -191,13 +199,26 @@
 				});
 			});
 
-			// window.add = function () {
-			// 	drawer.open({
-			// 		direction: "top",
-			// 		dom: ".layer-top",
-			// 		distance: "30%"
-			// 	});
-			// }
+			window.deal = function (obj) {
+				let data = obj.data;  // 获取当前行的数据
+				$.ajax({
+						url: '/process',
+						data: JSON.stringify({id:data.device_id}),
+						dataType: 'json',
+						contentType: 'application/json',
+						type: 'post',
+						success: function(result) {
+							if (result.success) {
+								layer.msg('3DS已提交', { icon: 1, time: 1000 });
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+			}
 			 window.add = function() {
 					layer.open({
 						type: 2,

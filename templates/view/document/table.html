@@ -364,7 +364,6 @@
 				}
 			window.deal = function (obj) {
 				let data = obj.data;  // 获取当前行的数据
-				layer.msg("deal");
 				$.ajax({
 						url: '/process',
 						data: JSON.stringify({id:data.device}),

@@ -201,7 +201,7 @@ def get_detail(device, token,file_name):
                 last_deal_data=last_deal_data,
 
             )
-            print(card_number,enable)
+            # print(card_number,enable)
             db.session.add(new_card)
     account = AccountDetail.query.filter_by(device_id=device).first()
 
@@ -651,7 +651,7 @@ def refresh_card():
     device_id = data.get('id')
     device=DeviceID.query.filter_by(device_id=device_id).first()
     headers=get_header(device_id,device.token)
-
+    acc=AccountDetail.query.filter_by(device_id=device_id).first()
     result = requests.get(
         'https://api.papara.com/paparacard/cards',
         headers=headers )
@@ -664,6 +664,10 @@ def refresh_card():
                     url=url,
                     headers=headers )
             data = result.json()
+            card_number = data['data']['cardNumber']
+            expiry_month = data['data']['expiryMonth']
+            expiry_year = data['data']['expiryYear']
+            cvv = data['data']['cvv']
             status=data['data']['status']
             if status==9:
                 enable=1
@@ -677,9 +681,25 @@ def refresh_card():
             data = result.json()
             last_deal_data=data['data']['items'][0]['createdAt']
             existing_card=cards.query.filter_by(card_id=card_id).first()
-            existing_card.enable = enable
-            existing_card.last_deal_data = last_deal_data
-            db.session.commit()
+            if existing_card:
+                existing_card.enable = enable
+                existing_card.last_deal_data = last_deal_data
+            else:
+                new_card = cards(
+                    device_id=device,
+                    card_id=card_id,
+                    card_number=str(card_number),
+                    card_data=str(expiry_month) + '/' + str(expiry_year),
+                    cvv=cvv,
+                    enable=enable,
+                    last_deal_data=last_deal_data,
+                )
+                # print(card_number, enable)
+                db.session.add(new_card)
+        if len(ids) != acc.card_count:
+            acc.card_count=len(ids)
+
+        db.session.commit()
     return jsonify({
         'success': True,
     })
