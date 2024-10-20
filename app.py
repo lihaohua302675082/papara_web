@@ -427,6 +427,7 @@ def add_device_id(device_id, user):
         return jsonify({'success': False, 'msg': f'Error: {str(e)}'}), 500
 
 
+@app.route('/<user>/receive_device', methods=['POST'])
 @app.route('/<user>/receive_device/<string:device_id>', methods=['GET'])
 def receive_device(user, device_id=None):
     if request.method == 'POST':
@@ -565,6 +566,7 @@ def set_threshold(user, threshold):
         db.session.commit()
         return jsonify({"status": f"用户 {user} 的阈值已创建并设置为 {threshold}"}), 201
 
+@app.route('/<user>/receive', methods=['POST'])
 @app.route('/<user>/receive/<string:acsTransID>', methods=['GET'])
 def receive(user, acsTransID=None):
     if request.method == 'POST':
