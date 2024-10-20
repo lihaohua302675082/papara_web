@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>新增页面</title>
+		{% include 'common/header.html' %}
+        <link rel="stylesheet" href="{{ url_for('static', filename='admin/css/loader.css') }}"/>
+        <link rel="stylesheet" href="{{ url_for('static', filename='admin/css/admin.css') }}"/>
+	</head>
+	<body>
+		<form class="layui-form" action="">
+			<div class="mainBox">
+				<div class="main-container">
+					<div class="layui-form-item">
+						<label class="layui-form-label">Device-Id</label>
+						<div class="layui-input-block">
+							<input type="text" name="Device-Id" lay-verify="title" autocomplete="off" placeholder="请输入设备ID"
+								class="layui-input">
+						</div>
+					</div>
+					<div class="layui-form-item">
+						<label class="layui-form-label">Token</label>
+						<div class="layui-input-block">
+							<input type="text" name="Token" lay-verify="title" autocomplete="off" placeholder="请输入Token"
+								class="layui-input">
+						</div>
+					</div>
+					<div class="layui-form-item">
+						<label class="layui-form-label">file-Name</label>
+						<div class="layui-input-block">
+							<input type="text" name="file-Name" lay-verify="title" autocomplete="off" placeholder="请输入文件路径"
+								class="layui-input">
+						</div>
+					</div>
+
+				</div>
+			</div>
+			<div class="bottom">
+				<div class="button-container">
+					<button type="submit" class="pear-btn pear-btn-primary pear-btn-sm" lay-submit=""
+						lay-filter="user-save">
+						<i class="layui-icon layui-icon-ok"></i>
+						提交
+					</button>
+					<button type="reset" class="pear-btn pear-btn-sm">
+						<i class="layui-icon layui-icon-refresh"></i>
+						重置
+					</button>
+				</div>
+			</div>
+		</form>
+		<!-- 资 源 引 入 -->
+        {% include 'common/footer.html' %}
+		<script>
+			layui.use(['form', 'jquery','layer'], function() {
+				let form = layui.form;
+				let $ = layui.jquery;
+				let layer = layui.layer;
+				form.on('submit(user-save)', function(data) {
+					let loader = layer.load(0, {shade: 0.1});
+					$.ajax({
+						url: '/add_device',
+						data: JSON.stringify(data.field),
+						dataType: 'json',
+						contentType: 'application/json',
+						type: 'post',
+						success: function(result) {
+							layer.close(loader);
+							if (result.success) {
+								layer.msg(result.msg, {
+									icon: 1,
+									time: 1000
+								}, function() {
+									parent.layer.close(parent.layer.getFrameIndex(window
+										.name)); //关闭当前页
+									layer.msg(result.msg, {
+									icon: 1,
+									time: 1000
+								})
+									parent.layui.table.reload("user-table");
+								});
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+					return false;
+				});
+			})
+		</script>
+		<script>
+		</script>
+	</body>
+</html>

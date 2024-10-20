@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		{% include 'common/header.html' %}
+		<style>
+			h1{
+				margin-top: 200px;
+				color: #5FB878;
+			}
+			.layui-card-body{
+				text-align: center;height: 500px;
+			}
+		</style>
+	</head>
+	<body class="pear-container">
+		<div class="layui-card">
+			<div class="layui-card-header"></div>
+			<div class="layui-card-body">
+				<h1><b>最 大 最 强，再 创 辉 煌</b></h1>
+				<h1>欢迎, {{ current_user.username }}!</h1>
+			</div>
+		</div>
+	</body>
+	{% include 'common/footer.html' %}
+</html>

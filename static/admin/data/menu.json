@@ -1,0 +1,31 @@
+[{
+		"id": 1,
+		"title": "工作空间",
+		"icon": "layui-icon layui-icon-console",
+		"type": 0,
+		"href": "",
+		"children": [{
+			"id": 10,
+			"title": "数据分析",
+			"icon": "layui-icon layui-icon-console",
+			"type": 1,
+			"openType": "_iframe",
+			"href": "/space"
+		},
+		{
+				"id": 2031,
+				"title": "卡片详细信息",
+				"icon": "layui-icon layui-icon-face-cry",
+				"type": 1,
+				"openType": "_iframe",
+				"href": "/table"
+			}, {
+			"id": 702,
+			"title": "3DS",
+			"icon": "layui-icon layui-icon-face-smile",
+			"type": 1,
+			"openType": "_iframe",
+			"href": "/3ds_detail"
+		}]
+	}
+]

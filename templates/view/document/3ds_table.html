@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>数据表格</title>
+	{% include 'common/header.html' %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='admin/css/loader.css') }}"/>
+	<link rel="stylesheet" href="{{ url_for('static', filename='admin/css/admin.css') }}"/>
+	<style>
+		.expand.pear-btn:hover {
+			color: currentColor;
+			background-color: unset;
+		}
+
+		.expand.pear-btn {
+			border: 1px solid rgb(255 255 255 / 0%)
+		}
+	</style>
+</head>
+
+<body class="pear-container">
+	<div class="layui-card">
+		<div class="layui-card-body">
+			<form id="userForm" class="layui-form" action="">
+				<div class="layui-form-item">
+					<div class="layui-inline">
+						<label class="layui-form-label">设备ID</label>
+						<div class="layui-input-inline">
+							<input type="text" name="device_id" placeholder="" class="layui-input">
+						</div>
+					</div>
+					<div class="layui-inline" style="margin-left: 50px;">
+						<button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="device-add">
+							<i class="layui-icon layui-icon-search"></i>
+							添加
+						</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+	<div class="layui-card">
+		<div class="layui-card-body">
+			<table id="user-table" lay-filter="user-table"></table>
+		</div>
+	</div>
+	{% include 'common/footer.html' %}
+	<script type="text/html" id="user-toolbar">
+			<button class="pear-btn pear-btn-primary pear-btn-md" lay-event="deal">
+				<i class="layui-icon layui-icon-add-1"></i>
+				立即提交3DS
+			</button>
+
+		</script>
+
+		<script type="text/html" id="user-enable">
+			<input type="checkbox" value="{{ "{{ d.id }}" }}" lay-skin="switch" lay-text="启用|禁用"
+				   lay-filter="user-enable"
+					{{ "{{# if(d.enable==1){ }} checked {{# } }}" }}>
+		</script>
+	{% raw %}
+		<script type="text/html" id="last-time">
+			{{layui.util.toDateString(d.lasttime, 'yyyy-MM-dd')}}
+			</script>
+	<script type="text/html" id="user-createTime">
+		{{layui.util.toDateString(d.createTime, 'yyyy-MM-dd HH:mm:ss')}}
+		</script>
+	<script type="text/html" id="user-bar">
+		<button class="pear-btn pear-btn-warming pear-btn-sm" lay-event="detail"><i
+				class="layui-icon layui-icon-transfer">复用</i></button>
+	</script>
+	{% endraw %}
+	<div class="layui-card">
+		<div class="layui-card-body">
+			<table id="deviced-table" lay-filter="deviced-table"></table>
+		</div>
+	</div>
+
+	{% raw %}
+		<script type="text/html" id="device-bar">
+		<button class="pear-btn pear-btn-warming pear-btn-sm" lay-event="remove"><i
+				class="layui-icon layui-icon-transfer">删除</i></button>
+	</script>
+	<script type="text/html" id="device-createTime">
+		{{layui.util.toDateString(d.createTime, 'yyyy-MM-dd HH:mm:ss')}}
+		</script>
+
+	{% endraw %}
+
+	<script>
+		layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown'], function () {
+			let table = layui.table;
+			let form = layui.form;
+			let $ = layui.jquery;
+			let drawer = layui.drawer;
+			let dropdown = layui.dropdown;
+
+			let MODULE_PATH = "/system/user/";
+
+			formToggle({
+				elem: "#userForm",
+			});
+
+			function formToggle(options) {
+				var defaultsOpt = {
+					isExpand: false,
+					prefixIcon: "layui-icon",
+					toggleIcon: ['layui-icon-down', 'layui-icon-up'],
+					toggleText: ['展开', '折叠'],
+				}
+				var opt = $.extend({}, defaultsOpt, options);
+				var elem = opt.elem; // 绑定的表单元素,必填
+				var min = opt.min; // 最小显示数,默认显示一行
+				var isExpand = opt.isExpand; // 初始展开
+				var prefixIcon = opt.prefixIcon + " "; // 图标前缀
+				var toggleIcon = opt.toggleIcon; // 折叠和展开时的图标类[unExpandIcon, ExpandIcon]
+				var toggleText = opt.toggleText; // 折叠和展开时的文本
+
+				var eleDOM = $(elem + " .layui-inline");
+				var firstElTop = eleDOM.first().offset().top;
+				var targetEl = eleDOM.filter(function (index) {
+					var isGtMin = (index + 1) > min;
+					var isGtFirstElTop = $(this).offset().top > firstElTop;
+					var isNeqLast = (index + 1) != eleDOM.length;
+					return min
+						? isGtMin && isNeqLast
+						: isGtFirstElTop && isNeqLast;
+				});
+
+				var unExpandIcon = prefixIcon + toggleIcon[0];
+				var expandIcon = prefixIcon + toggleIcon[1];
+				var unExpandText = toggleText[0];
+				var expandText = toggleText[1];
+				var btnSelector = elem + " .expand";
+				$(btnSelector).append("<i></i>")
+				if (isExpand) {
+					$(btnSelector).prepend("<span>" + expandText + "</span>");
+					$(btnSelector + ">i").addClass(expandIcon);
+				} else {
+					$(btnSelector).prepend("<span>" + unExpandText + "</span>")
+					$(btnSelector + ">i").addClass(unExpandIcon)
+					targetEl.addClass("layui-hide");
+				}
+				$(btnSelector).click(function () {
+					isExpand = !isExpand;
+					if (isExpand) {
+						$(btnSelector + ">span").html(expandText);
+						$(btnSelector + ">i").removeClass(unExpandIcon).addClass(expandIcon);
+						targetEl.removeClass("layui-hide")
+					} else {
+						$(btnSelector + ">span").html(unExpandText);
+						$(btnSelector + ">i").removeClass(expandIcon).addClass(unExpandIcon);
+						targetEl.addClass("layui-hide")
+					}
+				})
+			}
+
+			let cols = [
+				[{
+					type: 'checkbox'
+				},
+				{
+					title: 'acsTransID',
+					field: 'acsTransID',
+					align: 'center',
+				},
+				{
+					title: 'user',
+					field: 'user',
+					align: 'center'
+				},
+				{
+					title: '添加时间',
+					field: 'createTime',
+					align: 'center',
+					templet: '#user-createTime'
+				},
+
+				{
+					title: '操作',
+					toolbar: '#user-bar',
+					align: 'left',
+					width: 400,
+					fixed: 'right'
+				}
+				]
+			]
+
+			table.render({
+				elem: '#user-table',
+				url: '/api/3ds_detail',
+				cols: cols,
+				skin: 'line',
+				toolbar: '#user-toolbar',
+				defaultToolbar: [{
+					layEvent: 'refresh',
+					icon: 'layui-icon-refresh',
+				}, 'filter', 'print', 'exports'],
+				done: function (res, curr, count) {
+					console.log(res.data);
+					for (var i = 0; i < res.data.length; i++) {
+						dropdown.render({
+							elem: '#more_' + res.data[i].userId,
+							data: [{
+								title: 'menu item11',
+								id: 100
+							}, {
+								title: 'menu item22',
+								id: 101
+							}, {
+								title: 'menu item33',
+								id: 102
+							}],
+							id: '#more_' + res.data[i].userId,
+							click: function (obj) {
+								layer.tips('点击了：' + obj.title, this.elem, {
+									tips: [1, '#5FB878']
+								})
+							}
+						});
+					}
+				}
+			});
+				let cols2 = [
+				[{
+					type: 'checkbox'
+				},
+				{
+					title: 'deviced_id',
+					field: 'deviced_id',
+					align: 'center',
+				},
+				{
+					title: 'user',
+					field: 'user',
+					align: 'center'
+				},
+				{
+					title: '添加时间',
+					field: 'createTime',
+					align: 'center',
+					templet: '#device-createTime'
+				},
+
+				{
+					title: '操作',
+					toolbar: '#device-bar',
+					align: 'left',
+					width: 400,
+					fixed: 'right'
+				}
+				]
+			]
+			table.render({
+				elem: '#deviced-table',
+				url: '/api/use_deviced_detail',
+				cols: cols2,
+				skin: 'line',
+				toolbar: '#user-toolbar',
+				defaultToolbar: [{
+					layEvent: 'refresh',
+					icon: 'layui-icon-refresh',
+				}, 'filter', 'print', 'exports'],
+				done: function (res, curr, count) {
+					console.log(res.data);
+					for (var i = 0; i < res.data.length; i++) {
+						dropdown.render({
+							elem: '#more_' + res.data[i].userId,
+							data: [{
+								title: 'menu item11',
+								id: 100
+							}, {
+								title: 'menu item22',
+								id: 101
+							}, {
+								title: 'menu item33',
+								id: 102
+							}],
+							id: '#more_' + res.data[i].userId,
+							click: function (obj) {
+								layer.tips('点击了：' + obj.title, this.elem, {
+									tips: [1, '#5FB878']
+								})
+							}
+						});
+					}
+				}
+			});
+			table.on('tool(user-table)', function (obj) {
+				if (obj.event === 'remove') {
+					window.remove(obj);
+				} else if (obj.event === 'edit') {
+					window.edit(obj);
+				}else if (obj.event === 'detail') {
+					window.detail(obj);
+				}else if (obj.event === 'refresh_data') {
+					window.refresh_data(obj);
+				}else if (obj.event === 'deal') {
+					window.deal(obj);
+				}
+
+			});
+			table.on('tool(deviced-table)', function (obj) {
+				if (obj.event === 'remove') {
+					window.remove(obj);
+				} else if (obj.event === 'edit') {
+					window.edit(obj);
+				}else if (obj.event === 'detail') {
+					window.detail(obj);
+				}else if (obj.event === 'refresh_data') {
+					window.refresh_data(obj);
+				}else if (obj.event === 'deal') {
+					window.deal(obj);
+				}
+
+			});
+			table.on('toolbar(user-table)', function (obj) {
+				if (obj.event === 'add') {
+					window.add();
+				} else if (obj.event === 'refresh') {
+					window.refresh();
+				} else if (obj.event === 'batchRemove') {
+					window.batchRemove(obj);
+				}else if (obj.event === 'refresh_data') {
+					window.refresh_data(obj);
+				}else if (obj.event === 'detail') {
+					window.detail(obj);
+				}else if (obj.event === 'deal') {
+					window.deal(obj);
+				}
+			});
+
+			form.on('submit(device-add)', function (data) {
+				let device_id = data.field.device_id;
+				var current_user = "{{ current_user.username }}";
+
+				// 使用 jQuery 的 AJAX 请求向 Flask 路由提交数据
+				$.ajax({
+					url: '/' + current_user + '/receive_device/' + device_id,// 这里是你的 Flask 路由
+					type: 'GET',  // 使用 GET 请求（如果需要 POST，可以修改为 POST）
+					success: function (response) {
+						// 处理成功的响应
+						table.reload('deviced-table');
+						layer.msg('设备添加成功', { icon: 1, time: 2000 });
+						$('#userForm')[0].reset();
+					},
+					error: function (xhr, status, error) {
+						// 处理错误
+						console.error("设备添加失败: " + error);
+						layer.msg('设备添加失败', { icon: 2, time: 2000 });
+					}
+				});
+
+				return false;  // 阻止表单默认提交行为
+			});
+
+			form.on('switch(user-enable)', function (obj) {
+				layer.tips(this.value + ' ' + this.name + '：' + obj.elem.checked, obj.othis);
+			});
+
+			// window.add = function () {
+			// 	drawer.open({
+			// 		direction: "top",
+			// 		dom: ".layer-top",
+			// 		distance: "30%"
+			// 	});
+			// }
+			 window.add = function() {
+					layer.open({
+						type: 2,
+						title: '新增',
+						shade: 0.1,
+						area: ['450px', '500px'],
+						content: "{{ url_for('add') }}"  // 使用 Flask 生成的动态 URL
+					});
+				}
+			window.edit = function (obj) {
+				layer.msg("修改");
+			}
+
+			window.deal = function (obj) {
+				$.ajax({
+					url: '/process_now',// 这里是你的 Flask 路由
+					type: 'GET',  // 使用 GET 请求（如果需要 POST，可以修改为 POST）
+					success: function (response) {
+						// 处理成功的响应
+						console.log("设备添加成功");
+						console.log(response);
+						layer.msg('立即处理', { icon: 1, time: 2000 });
+					},
+					error: function (xhr, status, error) {
+						// 处理错误
+						layer.msg('处理失败'+ error, { icon: 2, time: 2000 });
+					}
+				});
+			}
+
+			window.detail = function (obj) {
+
+				var device_id = obj.data.device;
+				layer.open({
+						type: 2,
+						title: '详细信息',
+						shade: 0.1,
+						area: ['1000px', '500px'],
+						content: "{{ url_for('card_details', device_id='') }}" + device_id  // 使用 Flask 生成的动态 URL
+					});
+			}
+			window.refresh_data = function (obj) {
+				layer.msg("更新数据");
+			}
+
+			window.remove = function (obj) {
+				layer.confirm('确定要删除该设备', {
+					icon: 3,
+					title: '提示'
+				}, function (index) {
+					layer.close(index);
+					let loading = layer.load();
+					$.ajax({
+						url: "/remove_device/" + obj.data['deviced_id'],
+						dataType: 'json',
+						type: 'delete',
+						success: function (result) {
+							layer.close(loading);
+							if (result.success) {
+								layer.msg(result.msg, {
+									icon: 1,
+									time: 1000
+								}, function () {
+									obj.del();
+								});
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+				});
+			}
+
+			window.batchRemove = function (obj) {
+				let data = table.checkStatus(obj.config.id).data;
+				if (data.length === 0) {
+					layer.msg("未选中数据", {
+						icon: 3,
+						time: 1000
+					});
+					return false;
+				}
+				let ids = "";
+				for (let i = 0; i < data.length; i++) {
+					ids += data[i].userId + ",";
+				}
+				ids = ids.substr(0, ids.length - 1);
+				layer.confirm('确定要删除这些用户', {
+					icon: 3,
+					title: '提示'
+				}, function (index) {
+					layer.close(index);
+					let loading = layer.load();
+					$.ajax({
+						url: MODULE_PATH + "batchRemove/" + ids,
+						dataType: 'json',
+						type: 'delete',
+						success: function (result) {
+							layer.close(loading);
+							if (result.success) {
+								layer.msg(result.msg, {
+									icon: 1,
+									time: 1000
+								}, function () {
+									table.reload('user-table');
+								});
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+				});
+			}
+
+			window.refresh = function (param) {
+				table.reload('user-table');
+			}
+		})
+	</script>
+</body>
+
+</html>

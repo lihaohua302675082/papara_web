@@ -1,0 +1,23 @@
+{
+	"code": 0,
+	"msg": "...",
+	"count": 1,
+	"data": [{
+		"userId": "1",
+		"iban": "111111111",
+		"password": "$2a$10$1K7E1.IYCrsoZVCb6utOo.5jENtfOzhdKWhc49t2lk.UQd7Oam4FG",
+		"salt": null,
+		"status": null,
+		"device": "asdasdasdasdads",
+		"lasttime": "2024-10-17",
+		"limit": 0,
+		"avatar": null,
+		"sex": "1",
+		"balance": "0.25",
+		"enable": "0",
+		"count": 10,
+		"file": 25,
+		"login": "1",
+		"roleIds": null
+	}]
+}

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>数据表格</title>
+	{% include 'common/header.html' %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='admin/css/loader.css') }}"/>
+	<link rel="stylesheet" href="{{ url_for('static', filename='admin/css/admin.css') }}"/>
+	<style>
+		.expand.pear-btn:hover {
+			color: currentColor;
+			background-color: unset;
+		}
+
+		.expand.pear-btn {
+			border: 1px solid rgb(255 255 255 / 0%)
+		}
+	</style>
+</head>
+	<script type="text/html" id="user-toolbar">
+			<button class="pear-btn pear-btn-primary pear-btn-md" lay-event="refresh_data">
+				<i class="layui-icon layui-icon-refresh-1"></i>
+				刷新时间
+			</button>
+
+	</script>
+<body class="pear-container">
+	<div class="layui-card">
+		<div class="layui-card-body">
+			<table id="user-table" lay-filter="user-table"></table>
+		</div>
+	</div>
+	{% include 'common/footer.html' %}
+
+
+		<script type="text/html" id="user-enable">
+			<input type="checkbox" value="{{ "{{ d.id }}" }}" lay-skin="switch" lay-text="启用|禁用"
+				   lay-filter="user-enable"
+					{{ "{{# if(d.enable==1){ }} checked {{# } }}" }}>
+		</script>
+	{% raw %}
+		<script type="text/html" id="last-time">
+			{{layui.util.toDateString(d.lasttime, 'yyyy-MM-dd HH:mm:ss')}}
+			</script>
+	<script type="text/html" id="user-createTime">
+		{{layui.util.toDateString(d.createTime, 'yyyy-MM-dd')}}
+		</script>
+	{% endraw %}
+
+
+
+	<script>
+		layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown','layer'], function () {
+			let table = layui.table;
+			let form = layui.form;
+			let $ = layui.jquery;
+			let drawer = layui.drawer;
+			let dropdown = layui.dropdown;
+			let layer = layui.layer;
+			let MODULE_PATH = "/system/user/";
+
+
+
+			let cols = [
+				[
+				{
+					title: '卡号',
+					field: 'number',
+					align: 'center',
+				},
+				{
+					title: '有效期',
+					field: 'data',
+					align: 'center'
+				},
+				{
+					title: 'cvv',
+					field: 'cvv',
+					align: 'center',
+				},
+				{
+					title: '是否使用',
+					field: 'enable',
+					align: 'center',
+					templet: '#user-enable'
+				},
+				{
+					title: '最后使用时间',
+					field: 'lasttime',
+					align: 'center',
+					templet: '#last-time'
+				}
+				]
+			]
+			var device_id = "{{ device_id }}";
+			table.render({
+				elem: '#user-table',
+				url: '/api/card_detail/' + device_id,
+				cols: cols,
+				skin: 'line',
+				toolbar: '#user-toolbar',
+				defaultToolbar: [{
+					layEvent: 'refresh',
+					icon: 'layui-icon-refresh',
+				}, 'filter', 'print', 'exports'],
+				done: function (res, curr, count) {
+					console.log(res.data);
+					for (var i = 0; i < res.data.length; i++) {
+						dropdown.render({
+							elem: '#more_' + res.data[i].userId,
+							data: [{
+								title: 'menu item11',
+								id: 100
+							}, {
+								title: 'menu item22',
+								id: 101
+							}, {
+								title: 'menu item33',
+								id: 102
+							}],
+							id: '#more_' + res.data[i].userId,
+							click: function (obj) {
+								layer.tips('点击了：' + obj.title, this.elem, {
+									tips: [1, '#5FB878']
+								})
+							}
+						});
+					}
+				}
+			});
+
+			table.on('tool(user-table)', function (obj) {
+				if (obj.event === 'remove') {
+					window.remove(obj);
+				} else if (obj.event === 'edit') {
+					window.edit(obj);
+				}else if (obj.event === 'detail') {
+					window.detail();
+				}else if (obj.event === 'refresh_data') {
+					window.refresh_data(obj);
+				}
+
+			});
+
+			table.on('toolbar(user-table)', function (obj) {
+				if (obj.event === 'add') {
+					window.add();
+				} else if (obj.event === 'refresh') {
+					window.refresh();
+				} else if (obj.event === 'batchRemove') {
+					window.batchRemove(obj);
+				}else if (obj.event === 'refresh_data') {
+					window.refresh_data(obj);
+				}else if (obj.event === 'detail') {
+					window.detail(obj);
+				}
+			});
+
+
+			form.on('switch(user-enable)', function (obj) {
+				layer.tips(this.value + ' ' + this.name + '：' + obj.elem.checked, obj.othis);
+			});
+
+			// window.add = function () {
+			// 	drawer.open({
+			// 		direction: "top",
+			// 		dom: ".layer-top",
+			// 		distance: "30%"
+			// 	});
+			// }
+			 window.add = function() {
+					layer.open({
+						type: 2,
+						title: '新增',
+						shade: 0.1,
+						area: ['450px', '500px'],
+						content: "{{ url_for('add') }}"  // 使用 Flask 生成的动态 URL
+					});
+				}
+			window.edit = function (obj) {
+				layer.msg("修改");
+			}
+
+			window.detail = function (obj) {
+				layer.msg("detail");
+			}
+
+			window.refresh_data = function (obj) {
+				let loader = layer.load(0, {shade: 0.1});
+				$.ajax({
+						url: '/refresh_card',
+						data: JSON.stringify({id:device_id}),
+						dataType: 'json',
+						contentType: 'application/json',
+						type: 'post',
+						success: function(result) {
+							if (result.success){
+								layer.close(loader);
+								table.reload('user-table');
+								layer.msg('卡片数据已刷新', { icon: 1, time: 1000 });
+
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+			}
+
+			window.remove = function (obj) {
+				layer.confirm('确定要删除该用户', {
+					icon: 3,
+					title: '提示'
+				}, function (index) {
+					layer.close(index);
+					let loading = layer.load();
+					$.ajax({
+						url: MODULE_PATH + "remove/" + obj.data['userId'],
+						dataType: 'json',
+						type: 'delete',
+						success: function (result) {
+							layer.close(loading);
+							if (result.success) {
+								layer.msg(result.msg, {
+									icon: 1,
+									time: 1000
+								}, function () {
+									obj.del();
+								});
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+				});
+			}
+
+			window.batchRemove = function (obj) {
+				let data = table.checkStatus(obj.config.id).data;
+				if (data.length === 0) {
+					layer.msg("未选中数据", {
+						icon: 3,
+						time: 1000
+					});
+					return false;
+				}
+				let ids = "";
+				for (let i = 0; i < data.length; i++) {
+					ids += data[i].userId + ",";
+				}
+				ids = ids.substr(0, ids.length - 1);
+				layer.confirm('确定要删除这些用户', {
+					icon: 3,
+					title: '提示'
+				}, function (index) {
+					layer.close(index);
+					let loading = layer.load();
+					$.ajax({
+						url: MODULE_PATH + "batchRemove/" + ids,
+						dataType: 'json',
+						type: 'delete',
+						success: function (result) {
+							layer.close(loading);
+							if (result.success) {
+								layer.msg(result.msg, {
+									icon: 1,
+									time: 1000
+								}, function () {
+									table.reload('user-table');
+								});
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+				});
+			}
+
+			window.refresh = function (param) {
+				table.reload('user-table');
+			}
+		})
+	</script>
+</body>
+
+</html>
