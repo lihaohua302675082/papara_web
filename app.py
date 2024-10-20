@@ -177,6 +177,10 @@ def get_detail(device, token,file_name):
             expiry_year = data['data']['expiryYear']
             cvv = data['data']['cvv']
             enable=data['data']['internetTransactionsEnabled']
+            if enable:
+                enable=1
+            else:
+                enable=0
             data = {"cardId": card_id, "page": 1, "pageSize": 20}
             result = requests.post(
                     url='https://api.papara.com/user/ledgers',
@@ -652,6 +656,10 @@ def refresh_card():
                     headers=headers)
             data = result.json()
             enable=data['data']['internetTransactionsEnabled']
+            if enable:
+                enable=1
+            else:
+                enable=0
             data = {"cardId": card_id, "page": 1, "pageSize": 20}
             result = requests.post(
                     url='https://api.papara.com/user/ledgers',
