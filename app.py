@@ -158,7 +158,16 @@ def get_detail(device, token,file_name):
         proxies=proxies)
     if result.status_code == 200:
         data = result.json()
-        lasttime = data['data']['items'][0]['createdAt']
+        # 安全获取 'data' -> 'items' -> [0] -> 'createdAt'
+        lasttime = data.get('data', {}).get('items', [])
+
+        # 检查 items 列表是否至少有一个元素
+        if len(lasttime) > 0:
+            # 如果存在第一个元素，继续安全地获取 'createdAt'
+            lasttime = lasttime[0].get('createdAt', '')
+        else:
+            # 如果 items 为空或不存在，设为空
+            lasttime = None
 
 
     result = requests.get(
@@ -176,44 +185,53 @@ def get_detail(device, token,file_name):
     if result.status_code == 200:
         data = result.json()
         ids = [card['id'] for card in data['data']]
-        for card_id in ids:
-            url=f"https://api.papara.com/paparacard/{card_id}"
-            result = requests.get(
-                    url=url,
-                    headers=headers,
-        proxies=proxies)
-            data = result.json()
-            # 提取 cardNumber, expiryMonth, expiryYear 和 cvv
-            card_number = data['data']['cardNumber']
-            expiry_month = data['data']['expiryMonth']
-            expiry_year = data['data']['expiryYear']
-            cvv = data['data']['cvv']
-            status=data['data']['status']
-            if status==9:
-                enable=1
-            else:
-                enable=0
-            data = {"cardId": card_id, "page": 1, "pageSize": 20}
-            result = requests.post(
-                    url='https://api.papara.com/user/ledgers',
-                    headers=headers,
-                    data=data,
-        proxies=proxies)
-            data = result.json()
-            last_deal_data=data['data']['items'][0]['createdAt']
+        if len(ids)>0:
+            for card_id in ids:
+                url=f"https://api.papara.com/paparacard/{card_id}"
+                result = requests.get(
+                        url=url,
+                        headers=headers,
+                        proxies=proxies)
+                data = result.json()
+                # 提取 cardNumber, expiryMonth, expiryYear 和 cvv
+                card_number = data['data']['cardNumber']
+                expiry_month = data['data']['expiryMonth']
+                expiry_year = data['data']['expiryYear']
+                cvv = data['data']['cvv']
+                status=data['data']['status']
+                if status==9:
+                    enable=1
+                else:
+                    enable=0
+                data = {"cardId": card_id, "page": 1, "pageSize": 20}
+                result = requests.post(
+                        url='https://api.papara.com/user/ledgers',
+                        headers=headers,
+                        data=data,
+                        proxies=proxies)
+                data = result.json()
+                last_deal_data = data.get('data', {}).get('items', [])
 
-            new_card= cards(
-                device_id=device,
-                card_id=card_id,
-                card_number=str(card_number),
-                card_data=str(expiry_month)+'/'+str(expiry_year),
-                cvv=cvv,
-                enable=enable,
-                last_deal_data=last_deal_data,
+                # 检查 items 列表是否至少有一个元素
+                if len(last_deal_data) > 0:
+                    # 如果存在第一个元素，继续安全地获取 'createdAt'
+                    last_deal_data = last_deal_data[0].get('createdAt', '')
+                else:
+                    # 如果 items 为空或不存在，设为空
+                    last_deal_data = None
 
-            )
-            print(card_number,enable)
-            db.session.add(new_card)
+                new_card= cards(
+                    device_id=device,
+                    card_id=card_id,
+                    card_number=str(card_number),
+                    card_data=str(expiry_month)+'/'+str(expiry_year),
+                    cvv=cvv,
+                    enable=enable,
+                    last_deal_data=last_deal_data,
+
+                )
+                print(card_number,enable)
+                db.session.add(new_card)
     account = AccountDetail.query.filter_by(device_id=device).first()
 
     if account:
@@ -664,42 +682,71 @@ def refresh_card():
     device_id = data.get('id')
     device=DeviceID.query.filter_by(device_id=device_id).first()
     headers=get_header(device_id,device.token)
-
+    acc=AccountDetail.query.filter_by(device_id=device_id).first()
     result = requests.get(
         'https://api.papara.com/paparacard/cards',
         headers=headers,
-        proxies=proxies)
+        proxies=proxies )
     if result.status_code == 200:
         data = result.json()
         ids = [card['id'] for card in data['data']]
-        for card_id in ids:
-            url=f"https://api.papara.com/paparacard/{card_id}"
-            result = requests.get(
-                    url=url,
-                    headers=headers,
-        proxies=proxies)
-            data = result.json()
-            status=data['data']['status']
-            if status==9:
-                enable=1
-            else:
-                enable=0
-            data = {"cardId": card_id, "page": 1, "pageSize": 20}
-            result = requests.post(
-                    url='https://api.papara.com/user/ledgers',
-                    headers=headers,
-                    data=data,
-        proxies=proxies)
-            data = result.json()
-            last_deal_data=data['data']['items'][0]['createdAt']
-            existing_card=cards.query.filter_by(card_id=card_id).first()
-            existing_card.enable = enable
-            existing_card.last_deal_data = last_deal_data
-            db.session.commit()
+        if len(ids) > 0:
+            for card_id in ids:
+                url=f"https://api.papara.com/paparacard/{card_id}"
+                result = requests.get(
+                        url=url,
+                        headers=headers,
+        proxies=proxies )
+                data = result.json()
+                card_number = data['data']['cardNumber']
+                expiry_month = data['data']['expiryMonth']
+                expiry_year = data['data']['expiryYear']
+                cvv = data['data']['cvv']
+                status=data['data']['status']
+                if status==9:
+                    enable=1
+                else:
+                    enable=0
+                data = {"cardId": card_id, "page": 1, "pageSize": 20}
+                result = requests.post(
+                        url='https://api.papara.com/user/ledgers',
+                        headers=headers,
+                        data=data,
+        proxies=proxies )
+                data = result.json()
+                # 安全获取 'data' -> 'items' -> [0] -> 'createdAt'
+                last_deal_data = data.get('data', {}).get('items', [])
+
+                # 检查 items 列表是否至少有一个元素
+                if len(last_deal_data) > 0:
+                    # 如果存在第一个元素，继续安全地获取 'createdAt'
+                    last_deal_data = last_deal_data[0].get('createdAt', '')
+                else:
+                    # 如果 items 为空或不存在，设为空
+                    last_deal_data = None
+                existing_card=cards.query.filter_by(card_id=card_id).first()
+                if existing_card:
+                    existing_card.enable = enable
+                    existing_card.last_deal_data = last_deal_data
+                else:
+                    new_card = cards(
+                        device_id=device_id,
+                        card_id=card_id,
+                        card_number=str(card_number),
+                        card_data=str(expiry_month) + '/' + str(expiry_year),
+                        cvv=cvv,
+                        enable=enable,
+                        last_deal_data=last_deal_data,
+                    )
+                    # print(card_number, enable)
+                    db.session.add(new_card)
+        if len(ids) != acc.card_count:
+            acc.card_count=len(ids)
+
+        db.session.commit()
     return jsonify({
         'success': True,
     })
-
 
 
 
@@ -861,6 +908,31 @@ def update_device_status():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'msg': str(e)}), 500
+
+@app.route('/create_card', methods=['POST'])
+def create_card():
+    data = request.get_json()
+    device_id = data.get('id')
+    device=DeviceID.query.filter_by(device_id=device_id).first()
+    # print(device.token)
+    headers=get_header(device_id,device.token)
+    data = {"limitType": 0,"GhostCard": False}
+    result = requests.post(
+        'https://api.papara.com/paparacard/vcard',
+        data=data,
+        headers=headers,
+        proxies=proxies)
+    if result.status_code == 200:
+        response_data = result.json()
+        # 如果请求失败（succeeded == False），返回错误信息
+        if not response_data.get('succeeded', True):  # 默认值为 True，防止字段不存在导致错误
+            error_message = response_data.get('error', {}).get('message', '未知错误')
+            return jsonify({'success': False, 'msg': error_message}), 200
+
+        # 如果请求成功，处理成功的逻辑
+        return jsonify({'success': True, 'msg': '卡片创建成功'})
+    else:
+        return jsonify({'success': False, 'msg': '创建失败'}), 404
 
 if __name__ == '__main__':
     app.run(debug=True)

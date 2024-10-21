@@ -8,7 +8,8 @@ from sqlalchemy.exc import NoResultFound
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'your_secret_key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:isIris82745506@database-2.cxmisosi48au.ap-southeast-2.rds.amazonaws.com/papara?charset=utf8mb4'  # 示例数据库
+app.config[
+    'SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:isIris82745506@database-2.cxmisosi48au.ap-southeast-2.rds.amazonaws.com/papara?charset=utf8mb4'  # 示例数据库
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/test?charset=utf8mb4'
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'  # 设置登录视图
@@ -39,16 +40,16 @@ class Balance(db.Model):
     iban = db.Column(db.String(255), nullable=True)
 
 
-
 # 定义 ids 表的模型
 class ids(db.Model):
     # 定义字段
     id = db.Column(db.Integer, primary_key=True)
     acsTransID = db.Column(db.String(255), nullable=True)
     user = db.Column(db.String(255), nullable=True)
-    used = db.Column(db.String(255), nullable=True,default=0)
+    used = db.Column(db.String(255), nullable=True, default=0)
     # 自动为 createtime 字段设置当前时间
     createtime = db.Column(db.DateTime, nullable=False, default=func.now())
+
 
 # 定义 ids 表的模型
 class device(db.Model):
@@ -89,16 +90,15 @@ class cards(db.Model):
     card_data = db.Column(db.String(255), nullable=True)
     cvv = db.Column(db.String(255), nullable=True)
     last_deal_data = db.Column(db.DateTime, nullable=True)
-    enable=db.Column(db.Integer, nullable=True)
+    enable = db.Column(db.Integer, nullable=True)
 
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))  # 确保返回的是 User 对象，而不是整数
 
+
 def get_header(device, token):
-
-
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
         'p': '2',
@@ -131,13 +131,13 @@ def get_header(device, token):
 
     return headers
 
-def get_detail(device, token,file_name):
 
-    headers=get_header(device, token)
+def get_detail(device, token, file_name):
+    headers = get_header(device, token)
 
     result = requests.get(
         'https://api.papara.com/balance',
-        headers=headers )
+        headers=headers)
 
     if result.status_code == 200:
         data = result.json()
@@ -148,61 +148,81 @@ def get_detail(device, token,file_name):
     result = requests.post(
         'https://api.papara.com/user/ledgers',
         data=data,
-        headers=headers )
+        headers=headers)
     if result.status_code == 200:
         data = result.json()
-        lasttime = data['data']['items'][0]['createdAt']
+        # 安全获取 'data' -> 'items' -> [0] -> 'createdAt'
+        lasttime = data.get('data', {}).get('items', [])
 
+        # 检查 items 列表是否至少有一个元素
+        if len(lasttime) > 0:
+            # 如果存在第一个元素，继续安全地获取 'createdAt'
+            lasttime = lasttime[0].get('createdAt', '')
+        else:
+            # 如果 items 为空或不存在，设为空
+            lasttime = None
 
     result = requests.get(
-            url='https://api.papara.com/user/accountdetails/0',
-            headers=headers )
+        url='https://api.papara.com/user/accountdetails/0',
+        headers=headers)
     if result.status_code == 200:
         data = result.json()
         limit = data['data']['remainingDefinedLimit']
 
     result = requests.get(
         'https://api.papara.com/paparacard/cards',
-        headers=headers )
+        headers=headers)
     if result.status_code == 200:
         data = result.json()
         ids = [card['id'] for card in data['data']]
-        for card_id in ids:
-            url=f"https://api.papara.com/paparacard/{card_id}"
-            result = requests.get(
+        if len(ids) > 0:
+            for card_id in ids:
+                url = f"https://api.papara.com/paparacard/{card_id}"
+                result = requests.get(
                     url=url,
-                    headers=headers )
-            data = result.json()
-            # 提取 cardNumber, expiryMonth, expiryYear 和 cvv
-            card_number = data['data']['cardNumber']
-            expiry_month = data['data']['expiryMonth']
-            expiry_year = data['data']['expiryYear']
-            cvv = data['data']['cvv']
-            status=data['data']['status']
-            if status==9:
-                enable=1
-            else:
-                enable=0
-            data = {"cardId": card_id, "page": 1, "pageSize": 20}
-            result = requests.post(
-                    url='https://api.papara.com/user/ledgers',
-                    headers=headers,
-                    data=data )
-            data = result.json()
-            last_deal_data=data['data']['items'][0]['createdAt']
+                    headers=headers)
+                if result.status_code == 200:
+                    data = result.json()
+                    # 提取 cardNumber, expiryMonth, expiryYear 和 cvv
+                    card_number = data['data']['cardNumber']
+                    expiry_month = data['data']['expiryMonth']
+                    expiry_year = data['data']['expiryYear']
+                    cvv = data['data']['cvv']
+                    status = data['data']['status']
+                    if status == 9:
+                        enable = 1
+                    else:
+                        enable = 0
+                    data = {"cardId": card_id, "page": 1, "pageSize": 20}
+                    result = requests.post(
+                        url='https://api.papara.com/user/ledgers',
+                        headers=headers,
+                        data=data)
+                    data = result.json()
+                    # 安全获取 'data' -> 'items' -> [0] -> 'createdAt'
+                    last_deal_data = data.get('data', {}).get('items', [])
 
-            new_card= cards(
-                device_id=device,
-                card_id=card_id,
-                card_number=str(card_number),
-                card_data=str(expiry_month)+'/'+str(expiry_year),
-                cvv=cvv,
-                enable=enable,
-                last_deal_data=last_deal_data,
+                    # 检查 items 列表是否至少有一个元素
+                    if len(last_deal_data) > 0:
+                        # 如果存在第一个元素，继续安全地获取 'createdAt'
+                        last_deal_data = last_deal_data[0].get('createdAt', '')
+                    else:
+                        # 如果 items 为空或不存在，设为空
+                        last_deal_data = None
 
-            )
-            # print(card_number,enable)
-            db.session.add(new_card)
+                    new_card = cards(
+                        device_id=device,
+                        card_id=card_id,
+                        card_number=str(card_number),
+                        card_data=str(expiry_month) + '/' + str(expiry_year),
+                        cvv=cvv,
+                        enable=enable,
+                        last_deal_data=last_deal_data,
+
+                    )
+                    # print(card_number,enable)
+                    db.session.add(new_card)
+
     account = AccountDetail.query.filter_by(device_id=device).first()
 
     if account:
@@ -225,7 +245,7 @@ def updata_balance(device_id, header):
     account = Balance.query.filter_by(device_id=device_id).first()
     result = requests.get(
         'https://api.papara.com/balance',
-        headers=header )
+        headers=header)
     if result.status_code == 200:
         data = result.json()
         totalBalance = data['data']['balances'][0]['totalBalance']
@@ -272,14 +292,14 @@ def get_users():
     if enable_status is not None and enable_status != "":
         acc_query = acc_query.filter_by(used=int(enable_status))
 
-    acc_query=acc_query.paginate(page=page, per_page=limit, error_out=False)
+    acc_query = acc_query.paginate(page=page, per_page=limit, error_out=False)
     acc = acc_query.items
 
     # 将数据库对象转换为字典
     users_data = []
     for user in acc:
         users_data.append({
-            'id':user.id,
+            'id': user.id,
             'iban': user.iban,
             'device': user.device_id,
             'file': user.file_name,
@@ -333,7 +353,7 @@ def api_card_detail(device_id):
                 'cvv': card.cvv,
                 'data': card.card_data,
                 'lasttime': card.last_deal_data,
-                'enable':card.enable
+                'enable': card.enable
             })
         return jsonify({
             'code': 0,  # 状态码，Layui 表格要求 '0' 表示成功
@@ -352,9 +372,9 @@ def add_device():
     token = data.get('Token')
     fileplace = data.get('file-Name')
     quary = DeviceID.query.filter_by(device_id=device_id).first()
-    if quary :
+    if quary:
         return jsonify({'success': False, 'msg': 'Papara账户已存在'})
-    get_detail(device_id,token,fileplace)
+    get_detail(device_id, token, fileplace)
     new_device = DeviceID(device_id=device_id, token=token, fileplace=fileplace)
     try:
         db.session.add(new_device)
@@ -406,6 +426,7 @@ def table():
 def index_main():
     return render_template('index.html')
 
+
 def get_device_ids(user):
     results = device.query.filter(device.user == user).all()
     return [d.device_id for d in results]
@@ -445,6 +466,7 @@ def receive_device(user, device_id=None):
         # 不立即处理 acsTransID，而是等达到阈值或手动触发
         return jsonify({"status": f"device_id 已更新 for user {user}"}), 200
     return jsonify({"error": "请求中没有 device_id"}), 400
+
 
 def add_acsTransID(acsTransID, user):
     new_acsTransID = ids(acsTransID=acsTransID, user=user)
@@ -488,7 +510,7 @@ def send_post_request(acsTransID, device_id, user):
         result = requests.post(
             'https://api.papara.com/acs/challengeresult',
             headers=headers,
-            json=json_data )
+            json=json_data)
 
         if result.status_code == 200:
             message = f"成功发送POST请求，AcsTransID: {acsTransID}，Device ID: {device_id}，User: {user}"
@@ -501,6 +523,7 @@ def send_post_request(acsTransID, device_id, user):
         # 如果发生异常，返回空消息
         print(f"发送POST请求时出错: {e}")
         return {"status": "error", "message": None}
+
 
 def mark_acsTransID_as_used(acsTransID, user):
     try:
@@ -530,6 +553,7 @@ def get_user_threshold(user, default_value=1):
         return record.threshold  # 返回数据库中的阈值
     else:
         return default_value  # 如果用户不存在，返回默认值
+
 
 def process_unprocessed_acsTransIDs(user, force=False):
     device_ids = get_device_ids(user)
@@ -573,6 +597,7 @@ def set_threshold(user, threshold):
         db.session.commit()
         return jsonify({"status": f"用户 {user} 的阈值已创建并设置为 {threshold}"}), 201
 
+
 @app.route('/<user>/receive', methods=['POST'])
 @app.route('/<user>/receive/<string:acsTransID>', methods=['GET'])
 def receive(user, acsTransID=None):
@@ -593,9 +618,11 @@ def receive(user, acsTransID=None):
             return jsonify({"status": f"重复的 acsTransID 已忽略 for user {user}"}), 200
     return jsonify({"error": "请求中没有 acsTransID"}), 400
 
+
 @app.route('/3ds_detail')
 def ds_detail():
     return render_template('view/document/3ds_table.html')
+
 
 @app.route('/process_now', methods=['GET'])
 def process_now():
@@ -607,7 +634,7 @@ def process_now():
 @app.route('/api/use_deviced_detail', methods=['GET'])
 def use_deviced_detail():
     username = current_user.username
-    devices=device.query.filter_by(user=username).all()
+    devices = device.query.filter_by(user=username).all()
     devices_data = []
     if devices:
         for dev in devices:
@@ -623,6 +650,7 @@ def use_deviced_detail():
         'data': devices_data  # 实际数据
     })
 
+
 @app.route('/api/3ds_detail', methods=['GET'])
 @login_required
 def get_3ds_detail():
@@ -632,7 +660,7 @@ def get_3ds_detail():
     acsTransIDs_data = []
     if acsTransIDs:
         for card in acsTransIDs:
-            print(card.acsTransID,card.createtime)
+            print(card.acsTransID, card.createtime)
             acsTransIDs_data.append({
                 'user': username,
                 'acsTransID': card.acsTransID,
@@ -645,59 +673,70 @@ def get_3ds_detail():
         'data': acsTransIDs_data  # 实际数据
     })
 
+
 @app.route('/refresh_card', methods=['POST'])
 def refresh_card():
     data = request.get_json()
     device_id = data.get('id')
-    device=DeviceID.query.filter_by(device_id=device_id).first()
-    headers=get_header(device_id,device.token)
-    acc=AccountDetail.query.filter_by(device_id=device_id).first()
+    device = DeviceID.query.filter_by(device_id=device_id).first()
+    headers = get_header(device_id, device.token)
+    acc = AccountDetail.query.filter_by(device_id=device_id).first()
     result = requests.get(
         'https://api.papara.com/paparacard/cards',
-        headers=headers )
+        headers=headers)
     if result.status_code == 200:
         data = result.json()
         ids = [card['id'] for card in data['data']]
-        for card_id in ids:
-            url=f"https://api.papara.com/paparacard/{card_id}"
-            result = requests.get(
+        if len(ids) > 0:
+            for card_id in ids:
+                url = f"https://api.papara.com/paparacard/{card_id}"
+                result = requests.get(
                     url=url,
-                    headers=headers )
-            data = result.json()
-            card_number = data['data']['cardNumber']
-            expiry_month = data['data']['expiryMonth']
-            expiry_year = data['data']['expiryYear']
-            cvv = data['data']['cvv']
-            status=data['data']['status']
-            if status==9:
-                enable=1
-            else:
-                enable=0
-            data = {"cardId": card_id, "page": 1, "pageSize": 20}
-            result = requests.post(
+                    headers=headers)
+                data = result.json()
+                card_number = data['data']['cardNumber']
+                expiry_month = data['data']['expiryMonth']
+                expiry_year = data['data']['expiryYear']
+                cvv = data['data']['cvv']
+                status = data['data']['status']
+                if status == 9:
+                    enable = 1
+                else:
+                    enable = 0
+                data = {"cardId": card_id, "page": 1, "pageSize": 20}
+                result = requests.post(
                     url='https://api.papara.com/user/ledgers',
                     headers=headers,
-                    data=data )
-            data = result.json()
-            last_deal_data=data['data']['items'][0]['createdAt']
-            existing_card=cards.query.filter_by(card_id=card_id).first()
-            if existing_card:
-                existing_card.enable = enable
-                existing_card.last_deal_data = last_deal_data
-            else:
-                new_card = cards(
-                    device_id=device,
-                    card_id=card_id,
-                    card_number=str(card_number),
-                    card_data=str(expiry_month) + '/' + str(expiry_year),
-                    cvv=cvv,
-                    enable=enable,
-                    last_deal_data=last_deal_data,
-                )
-                # print(card_number, enable)
-                db.session.add(new_card)
+                    data=data)
+                data = result.json()
+                # 安全获取 'data' -> 'items' -> [0] -> 'createdAt'
+                last_deal_data = data.get('data', {}).get('items', [])
+
+                # 检查 items 列表是否至少有一个元素
+                if len(last_deal_data) > 0:
+                    # 如果存在第一个元素，继续安全地获取 'createdAt'
+                    last_deal_data = last_deal_data[0].get('createdAt', '')
+                else:
+                    # 如果 items 为空或不存在，设为空
+                    last_deal_data = None
+                existing_card = cards.query.filter_by(card_id=card_id).first()
+                if existing_card:
+                    existing_card.enable = enable
+                    existing_card.last_deal_data = last_deal_data
+                else:
+                    new_card = cards(
+                        device_id=device_id,
+                        card_id=card_id,
+                        card_number=str(card_number),
+                        card_data=str(expiry_month) + '/' + str(expiry_year),
+                        cvv=cvv,
+                        enable=enable,
+                        last_deal_data=last_deal_data,
+                    )
+                    # print(card_number, enable)
+                    db.session.add(new_card)
         if len(ids) != acc.card_count:
-            acc.card_count=len(ids)
+            acc.card_count = len(ids)
 
         db.session.commit()
     return jsonify({
@@ -705,20 +744,17 @@ def refresh_card():
     })
 
 
-
-
-
 @app.route('/refresh_account', methods=['POST'])
 def refresh_account():
     data = request.get_json()
     device_id = data.get('id')
-    device=DeviceID.query.filter_by(device_id=device_id).first()
+    device = DeviceID.query.filter_by(device_id=device_id).first()
     # print(device.token)
-    headers=get_header(device_id,device.token)
+    headers = get_header(device_id, device.token)
 
     result = requests.get(
         'https://api.papara.com/balance',
-        headers=headers )
+        headers=headers)
 
     if result.status_code == 200:
         data = result.json()
@@ -728,46 +764,46 @@ def refresh_account():
     result = requests.post(
         'https://api.papara.com/user/ledgers',
         data=data,
-        headers=headers )
+        headers=headers)
     if result.status_code == 200:
         data = result.json()
         lasttime = data['data']['items'][0]['createdAt']
 
-
     result = requests.get(
-            url='https://api.papara.com/user/accountdetails/0',
-            headers=headers )
+        url='https://api.papara.com/user/accountdetails/0',
+        headers=headers)
     if result.status_code == 200:
         data = result.json()
         limit = data['data']['remainingDefinedLimit']
 
-    existing_acc=AccountDetail.query.filter_by(device_id=device_id).first()
-    existing_acc.balance=totalBalance
-    existing_acc.limit=limit
-    existing_acc.last_time=lasttime
+    existing_acc = AccountDetail.query.filter_by(device_id=device_id).first()
+    existing_acc.balance = totalBalance
+    existing_acc.limit = limit
+    existing_acc.last_time = lasttime
     db.session.commit()
     return jsonify({
         'success': True,
         'data': {
             'total_balance': totalBalance,
             'limit': limit,
-            'lasttime':lasttime
+            'lasttime': lasttime
         }
     })
+
 
 @app.route('/process', methods=['POST'])
 def process():
     data = request.get_json()
     device_id = data.get('id')
     username = current_user.username
-    print(device_id,username)
-    messages=[]
+    print(device_id, username)
+    messages = []
     acsTransIDs = ids.query.filter(ids.user == username, ids.used == 0).all()
     acsTransIDs = [d.acsTransID for d in acsTransIDs]
     for acsTransID in acsTransIDs:
-            result = send_post_request(acsTransID, device_id, username)
-            messages.append(result["message"])  # 保存所有的消息（成功或失败）
-            mark_acsTransID_as_used(acsTransID, username)
+        result = send_post_request(acsTransID, device_id, username)
+        messages.append(result["message"])  # 保存所有的消息（成功或失败）
+        mark_acsTransID_as_used(acsTransID, username)
     return jsonify({
         'success': True,
         'data': {
@@ -795,6 +831,7 @@ def remove(id):
         db.session.rollback()
         return jsonify({"success": False, "msg": f"删除设备时发生错误: {str(e)}"}), 500
 
+
 @app.route('/remove_device/<string:id>', methods=['DELETE'])
 def remove_device(id):
     try:
@@ -813,6 +850,8 @@ def remove_device(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "msg": f"删除设备时发生错误: {str(e)}"}), 500
+
+
 @app.route('/update_card_status', methods=['POST'])
 def update_card_status():
     data = request.get_json()
@@ -828,7 +867,7 @@ def update_card_status():
             if enable == 1:
                 data = {"cardId": card_record.card_id, "enabled": True}
             else:
-                data={"cardId": card_record.card_id, "enabled": False}
+                data = {"cardId": card_record.card_id, "enabled": False}
             result = requests.post(
                 'https://api.papara.com/paparacard/settings/enabled',
                 headers=headers,
@@ -842,6 +881,7 @@ def update_card_status():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'msg': str(e)}), 500
+
 
 @app.route('/update_device_status', methods=['POST'])
 def update_device_status():
@@ -861,6 +901,29 @@ def update_device_status():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'msg': str(e)}), 500
+@app.route('/create_card', methods=['POST'])
+def create_card():
+    data = request.get_json()
+    device_id = data.get('id')
+    device=DeviceID.query.filter_by(device_id=device_id).first()
+    # print(device.token)
+    headers=get_header(device_id,device.token)
+    data = {"limitType": 0,"GhostCard": False}
+    result = requests.post(
+        'https://api.papara.com/paparacard/vcard',
+        data=data,
+        headers=headers)
+    if result.status_code == 200:
+        response_data = result.json()
+        # 如果请求失败（succeeded == False），返回错误信息
+        if not response_data.get('succeeded', True):  # 默认值为 True，防止字段不存在导致错误
+            error_message = response_data.get('error', {}).get('message', '未知错误')
+            return jsonify({'success': False, 'msg': error_message}), 200
+
+        # 如果请求成功，处理成功的逻辑
+        return jsonify({'success': True, 'msg': '卡片创建成功'})
+    else:
+        return jsonify({'success': False, 'msg': '创建失败'}), 404
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -23,9 +23,14 @@
 				<i class="layui-icon layui-icon-refresh-1"></i>
 				刷新时间
 			</button>
-					<button class="pear-btn pear-btn-primary pear-btn-md" lay-event="deal">
-				<i class="layui-icon layui-icon-refresh-1"></i>
+					<button class="pear-btn pear-btn-warming pear-btn-md" lay-event="deal">
+				<i class="layui-icon layui-icon-mike"></i>
 				3DS
+			</button>
+			</button>
+					<button class="pear-btn pear-btn-danger pear-btn-md" lay-event="create">
+				<i class="layui-icon layui-icon-add-1"></i>
+				创建卡片
 			</button>
 
 	</script>
@@ -145,6 +150,8 @@
 					window.refresh_data(obj);
 				}else if (obj.event === 'deal') {
 					window.deal(obj);
+				}else if (obj.event === 'create') {
+					window.create(obj);
 				}
 
 			});
@@ -162,6 +169,8 @@
 					window.detail(obj);
 				}else if (obj.event === 'deal') {
 					window.deal(obj);
+				}else if (obj.event === 'create') {
+					window.create(obj);
 				}
 			});
 
@@ -200,10 +209,9 @@
 			});
 
 			window.deal = function (obj) {
-				let data = obj.data;  // 获取当前行的数据
 				$.ajax({
 						url: '/process',
-						data: JSON.stringify({id:data.device_id}),
+						data: JSON.stringify({id:device_id}),
 						dataType: 'json',
 						contentType: 'application/json',
 						type: 'post',
@@ -231,7 +239,27 @@
 			window.edit = function (obj) {
 				layer.msg("修改");
 			}
-
+			window.create = function (obj) {
+				$.ajax({
+						url: '/create_card',
+						data: JSON.stringify({id:device_id}),
+						dataType: 'json',
+						contentType: 'application/json',
+						type: 'post',
+						success: function(result) {
+							if (result.success) {
+								layer.msg(result.msg, { icon: 1, time: 1000 });
+								window.refresh_data(obj)
+							} else {
+								// 如果创建失败，显示后端返回的错误信息
+								layer.msg('错误: ' + result.msg, { icon: 2, time: 2000 });
+							}
+						},
+							error: function(xhr, status, error) {
+								layer.msg('创建卡片请求失败: ' + error, { icon: 2, time: 2000 });
+							}
+					})
+			}
 			window.detail = function (obj) {
 				layer.msg("detail");
 			}
