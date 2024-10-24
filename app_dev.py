@@ -286,7 +286,7 @@ def get_users():
     if ibannumber:
         acc_query = acc_query.filter_by(iban=ibannumber)
     if filename:
-        acc_query = acc_query.filter_by(file_name=filename)
+        acc_query = acc_query.filter(AccountDetail.file_name.like(f"%{filename}%"))
     if devicedids:
         acc_query = acc_query.filter_by(device_id=devicedids)
     if enable_status is not None and enable_status != "":
@@ -756,9 +756,23 @@ def refresh_account():
         'https://api.papara.com/balance',
         headers=headers)
 
+    # 确保响应成功，并且包含 'totalBalance' 字段
     if result.status_code == 200:
         data = result.json()
-        totalBalance = data['data']['balances'][0]['totalBalance']
+
+        # 安全地获取 totalBalance
+        balances = data.get('data', {}).get('balances', [])
+
+        if len(balances) > 0 and 'totalBalance' in balances[0]:
+            totalBalance = balances[0]['totalBalance']
+        else:
+            totalBalance = 0  # 设置默认值，防止未赋值时出错
+
+        # 使用 totalBalance
+        print("Total Balance:", totalBalance)
+    else:
+        totalBalance = 0  # 设置默认值，防止在请求失败时出错
+        print("Error fetching balance:", result.status_code)
 
     data = {"page": 1, "pageSize": 20}
     result = requests.post(
@@ -924,6 +938,121 @@ def create_card():
         return jsonify({'success': True, 'msg': '卡片创建成功'})
     else:
         return jsonify({'success': False, 'msg': '创建失败'}), 404
+from datetime import datetime
 
+def build_tree(data):
+    flat_data = []  # 用于存放扁平化后的数据
+
+    # 先按照 fileparent 排序
+    sorted_data = sorted(data, key=lambda x: x['fileparent'])
+
+    # 存储父节点的 lasttime 和 enable
+    parent_lasttime = {}
+    parent_enable = {}
+
+    # 辅助函数：将 lasttime 转换为 datetime 对象
+    def parse_lasttime(lasttime):
+        if isinstance(lasttime, str):
+            return datetime.strptime(lasttime, "%a, %d %b %Y %H:%M:%S GMT")
+        return lasttime  # 如果已经是 datetime 对象，直接返回
+
+    # 遍历排序后的数据
+    for item in sorted_data:
+        fileparent = item['fileparent']
+        fileparent2 = item['fileparent2']
+        lasttime = item['lasttime']
+        enable = item['enable']
+
+        # 查找该父节点是否已经添加到 flat_data 中
+        parent_node = next((node for node in flat_data if node['powerId'] == fileparent), None)
+
+        # 如果父节点不存在，创建它并加入 flat_data
+        if not parent_node:
+            parent_node = {
+                'powerId': fileparent,  # 父节点的ID
+                'parentId': 0,  # 根节点的 parentId 为 0
+                'powerName': f"Folder: {fileparent}",  # 父节点名称
+                'balance': '',  # 父节点不需要 balance 等字段，可以为空
+                'count': '',
+                'device': '',
+                'iban': '',
+                'lasttime': '',  # 初始值为空
+                'enable': 0,  # 初始值为0，表示不可用
+                'limit': ''
+            }
+            flat_data.append(parent_node)
+
+        # 更新父节点的 lasttime 为子节点中最晚的时间
+        parent_lasttime[fileparent] = max(
+            parent_lasttime.get(fileparent, lasttime),
+            lasttime,
+            key=parse_lasttime  # 使用辅助函数解析时间
+        )
+
+        # 如果任意子节点的 enable 为 1，则父节点的 enable 也设为 1
+        if enable == 1:
+            parent_enable[fileparent] = 1
+
+        # 创建子节点
+        child_node = {
+            'powerId': f"{fileparent}-{fileparent2}",  # 子节点 ID，确保唯一
+            'index': item['id'],
+            'parentId': fileparent,  # 指向父节点的ID
+            'powerName': f"File: {fileparent2}",
+            'balance': item['balance'],
+            'count': item['count'],
+            'file': item['file'],
+            'device': item['device'],
+            'iban': item['iban'],
+            'lasttime': lasttime,  # 子节点的 lasttime
+            'enable': enable,  # 子节点的 enable
+            'limit': item['limit']
+        }
+
+        # 将子节点添加到 flat_data 中
+        flat_data.append(child_node)
+
+    # 最后，将所有父节点的 lasttime 和 enable 更新
+    for node in flat_data:
+        if node['powerId'] in parent_lasttime:
+            node['lasttime'] = parent_lasttime[node['powerId']]
+        if node['powerId'] in parent_enable:
+            node['enable'] = parent_enable[node['powerId']]  # 如果有一个子节点 enable 为 1，父节点 enable 也为 1
+
+    return flat_data  # 返回扁平化后的数据
+
+
+
+
+@app.route('/api/get_tree_data', methods=['GET'])
+def get_tree_data():
+    # 数据
+    acc_query = AccountDetail.query.filter_by().all()
+
+    # 将数据库对象转换为字典
+    users_data = []
+    for user in acc_query:
+        fileparent = user.file_name.split("-")
+        users_data.append({
+            'id': user.id,
+            'iban': user.iban,
+            'device': user.device_id,
+            'file': user.file_name,
+            'balance': user.balance,
+            'limit': user.limit,
+            'enable': user.used,
+            'count': user.card_count,
+            'lasttime': user.last_time,
+            'fileparent': fileparent[0],
+            'fileparent2': fileparent[1],
+        })
+
+
+    tree_data = build_tree(users_data)
+    return jsonify({
+        'code': 0,
+        'msg': '',
+        'data': tree_data
+    })
 if __name__ == '__main__':
     app.run(debug=True)

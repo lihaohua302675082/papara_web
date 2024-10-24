@@ -3,44 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>树形表格</title>
-    <link rel="stylesheet" href="../../../component/pear/css/pear.css" />
+	{% include 'common/header.html' %}
+	<link rel="stylesheet" href="{{ url_for('static', filename='admin/css/loader.css') }}"/>
+	<link rel="stylesheet" href="{{ url_for('static', filename='admin/css/admin.css') }}"/>
 </head>
 <body class="pear-container">
-<div class="layui-card">
-    <div class="layui-card-body">
-        <form class="layui-form" action="">
-            <div class="layui-form-item">
-                <label class="layui-form-label">关键字</label>
-                <div class="layui-input-inline">
-                    <input type="text" name="keyword" placeholder="" class="layui-input">
-                </div>
-                <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="power-query">
-                    <i class="layui-icon layui-icon-search"></i>
-                    查询
-                </button>
-                <button type="reset" class="pear-btn pear-btn-md">
-                    <i class="layui-icon layui-icon-refresh"></i>
-                    重置
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+
 
 <div class="layui-card">
     <div class="layui-card-body">
         <table id="power-table" lay-filter="power-table"></table>
     </div>
 </div>
-
+{% include 'common/footer.html' %}
 <script type="text/html" id="power-toolbar">
     <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add">
         <i class="layui-icon layui-icon-add-1"></i>
         新增
-    </button>
-    <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="batchRemove">
-        <i class="layui-icon layui-icon-delete"></i>
-        删除
     </button>
 	<button class="pear-btn pear-btn-success pear-btn-md" lay-event="expandAll">
 	    <i class="layui-icon layui-icon-spread-left"></i>
@@ -50,37 +29,47 @@
 	    <i class="layui-icon layui-icon-shrink-right"></i>
 	    折叠
 	</button>
-	<button class="pear-btn pear-btn-success pear-btn-md" lay-event="reload">
-	    <i class="layui-icon layui-icon-refresh"></i>
-	    重载
-	</button>
 </script>
+	<script type="text/html" id="user-enable">
+		<input type="checkbox" value="{{ "{{ d.id }}" }}" lay-skin="switch" lay-text="使用|未使用"
+			   lay-filter="user-enable"
+				{{ "{{# if(d.enable==1){ }} checked {{# } }}" }}>
+	</script>
+</script>
+	{% raw %}
+		<script type="text/html" id="last-time">
+			{{layui.util.toDateString(d.lasttime, 'yyyy-MM-dd HH:mm:ss')}}
+			</script>
+	<script type="text/html" id="user-createTime">
+		{{layui.util.toDateString(d.createTime, 'yyyy-MM-dd')}}
+		</script>
+	<script type="text/html" id="user-bar">
+		<button class="pear-btn pear-btn-warming pear-btn-sm" lay-event="detail"><i
+				class="layui-icon layui-icon-transfer">查看卡片</i></button>
+		<button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="deal"><i
+				class="layui-icon layui-icon-edit">3DS</i></button>
+		<button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove"><i
+				class="layui-icon layui-icon-delete">删除</i></button>
+		<button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="refresh_data"><i
+				class="layui-icon layui-icon-delete">刷新</i></button>
+	</script>
+	{% endraw %}
 
 <script type="text/html" id="power-bar">
     <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="edit"><i class="layui-icon layui-icon-edit"></i></button>
     <button class="pear-btn pear-btn-danger pear-btn-sm" lay-event="remove"><i class="layui-icon layui-icon-delete"></i></button>
 </script>
 
-<script type="text/html" id="power-type">
-    {{#if (d.powerType == '0') { }}
-    <span>目录</span>
-    {{# }else if(d.powerType == '1'){ }}
-    <span>菜单</span>
-    {{# }else if(d.powerType == '2'){ }}
-    <span>按钮</span>
-    {{# } }}
-</script>
 
-<script type="text/html" id="power-enable">
-    <input type="checkbox" name="enable" value="{{d.id}}" lay-skin="switch" lay-text="启用|禁用" lay-filter="user-enable" checked = "{{ d.id == 10003 ? 'true' : 'false' }}">
-</script>
+<!--<script type="text/html" id="user-enable">-->
+<!--    <input type="checkbox" value="{{ "{{ d.id }}" }}" lay-skin="switch" lay-text="使用|未使用"-->
+<!--           lay-filter="user-enable"-->
+<!--            {{ "{{# if(d.enable==1){ }} checked {{# } }}" }}>-->
+<!--</script>-->
 
-<script type="text/html" id="icon">
-    <i class="layui-icon {{d.icon}}"></i>
-</script>
 
-<script src="../../../component/layui/layui.js"></script>
-<script src="../../../component/pear/pear.js"></script>
+
+
 <script>
     layui.use(['table','form','jquery','treetable'],function () {
         let table = layui.table;
@@ -99,18 +88,22 @@
                 treeDefaultClose: true,
                 toolbar:'#power-toolbar',
                 elem: '#power-table',
-                url: '../../admin/data/power.json',
+                url: '/api/get_tree_data',
                 page: false,
                 cols: [
                     [
                     {type: 'checkbox'},
-                    {field: 'powerName', minWidth: 200, title: '权限名称'},
-                    {field: 'icon', title: '图标',templet:'#icon'},
-                    {field: 'powerType', title: '权限类型',templet:'#power-type'},
-                    {field: 'enable', title: '是否可用',templet:'#power-enable'},
-                    {field: 'sort', title: '排序'},
-                    {title: '操作',templet: '#power-bar', width: 150, align: 'center'}
-                    ]
+                    {field: 'id', minWidth: 200, title: 'id'},
+					{field: 'index', minWidth: 200, title: 'index'},
+                    {field: 'iban', title: 'iban'},
+                    {field: 'device', title: '设备ID'},
+                    {field: 'file', title: '文件名'},
+                    {field: 'balance', title: '余额'},
+					{title: '额度', field: 'limit', align: 'center'},
+                    {field: 'count', title: '卡片数量'},
+                    {title: '是否使用', field: 'enable', align: 'center', templet: '#user-enable'},
+                    {title: '最后使用时间', field: 'lasttime', align: 'center', templet: '#last-time'},
+                    {title: '操作', toolbar: '#user-bar', align: 'left', width: 400, fixed: 'right'}]
                 ]
         });
 
@@ -119,7 +112,13 @@
                 window.remove(obj);
             } else if (obj.event === 'edit') {
                 window.edit(obj);
-            }
+            }else if (obj.event === 'deal') {
+				window.deal(obj);
+			}else if (obj.event === 'detail') {
+				window.detail(obj);
+			}else if (obj.event === 'refresh_data') {
+				window.refresh_data(obj);
+			}
         })
 
         table.on('toolbar(power-table)', function(obj){
@@ -144,48 +143,136 @@
             return false;
 		});
 	
-        window.add = function(){
-            layer.open({
-                type: 2,
-                title: '新增',
-                shade: 0.1,
-                area: ['450px', '500px'],
-                content: MODULE_PATH + 'add.html'
-            });
-        }
+		 window.add = function() {
+				layer.open({
+					type: 2,
+					title: '新增',
+					shade: 0.1,
+					area: ['450px', '500px'],
+					content: "{{ url_for('add') }}"  // 使用 Flask 生成的动态 URL
+				});
+			}
 
-        window.edit = function(obj){
-            layer.open({
-                type: 2,
-                title: '修改',
-                shade: 0.1,
-                area: ['450px', '500px'],
-                content: MODULE_PATH + 'edit.html'
-            });
-        }
-		
-        window.remove = function(obj){
-            layer.confirm('确定要删除该权限', {icon: 3, title:'提示'}, function(index){
-                layer.close(index);
-                let loading = layer.load();
-                $.ajax({
-                    url: MODULE_PATH+"remove/"+obj.data['powerId'],
-                    dataType:'json',
-                    type:'delete',
-                    success:function(result){
-                        layer.close(loading);
-                        if(result.success){
-                            layer.msg(result.msg,{icon:1,time:1000},function(){
-                                obj.del();
-                            });
-                        }else{
-                            layer.msg(result.msg,{icon:2,time:1000});
-                        }
-                    }
-                })
-            });
-        }
-		
+        window.deal = function (obj) {
+				let data = obj.data;  // 获取当前行的数据
+				$.ajax({
+						url: '/process',
+						data: JSON.stringify({id:data.device}),
+						dataType: 'json',
+						contentType: 'application/json',
+						type: 'post',
+						success: function(result) {
+							if (result.success) {
+								layer.msg('3DS已提交', { icon: 1, time: 1000 });
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+			}
+
+			window.detail = function (obj) {
+
+				var device_id = obj.data.device;
+				layer.open({
+						type: 2,
+						title: '详细信息',
+						shade: 0.1,
+						area: ['1000px', '500px'],
+						content: "{{ url_for('card_details', device_id='') }}" + device_id  // 使用 Flask 生成的动态 URL
+					});
+			}
+			window.refresh_data = function (obj) {
+				let data = obj.data;  // 获取当前行的数据
+        		let event = obj.event;  // 获取触发的事件名
+				$.ajax({
+						url: '/refresh_account',
+						data: JSON.stringify({id:data.device}),
+						dataType: 'json',
+						contentType: 'application/json',
+						type: 'post',
+						success: function(result) {
+							if (result.success) {
+								obj.update({
+								balance: result.data.total_balance,  // 假设返回的数据中包含 total_balance
+								limit: result.data.limit,
+								last_time:result.data.lasttime
+							});
+								layer.msg('数据已刷新', { icon: 1, time: 1000 });
+								table.reload('user-table');
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+
+			}
+
+			window.remove = function (obj) {
+				layer.confirm('确定要删除该用户', {
+					icon: 3,
+					title: '提示'
+				}, function (index) {
+					layer.close(index);
+					let loading = layer.load();
+					$.ajax({
+						url: "/remove/" + obj.data['index'],
+						dataType: 'json',
+						type: 'delete',
+						success: function (result) {
+							layer.close(loading);
+							if (result.success) {
+								layer.msg(result.msg, {
+									icon: 1,
+									time: 1000
+								}, function () {
+									obj.del();
+								});
+							} else {
+								layer.msg(result.msg, {
+									icon: 2,
+									time: 1000
+								});
+							}
+						}
+					})
+				});
+			}
+		form.on('switch(user-enable)', function(obj) {
+				let trElem = $(obj.elem).closest('tr');  // 获取当前开关所在的行（tr 元素）
+				let index = trElem.attr('data-index');   // 获取行的索引值
+				let rowData = table.cache['power-table'][index];  // 通过索引值获取当前行的完整数据
+
+				let number = rowData.id;  // 获取当前行的 number 值
+				let enable_status = obj.elem.checked ? 1 : 0;  // 获取开关状态
+
+				// 发送 AJAX 请求，更新状态
+				$.ajax({
+					url: '/update_device_status',
+					type: 'POST',
+					contentType: 'application/json',
+					data: JSON.stringify({
+						id: number,     // 传递卡号（number）
+						enable: enable_status  // 传递启用状态
+					}),
+					success: function (result) {
+						if (result.success) {
+							layer.msg('设备状态已更新', { icon: 1, time: 1000 });
+						} else {
+							layer.msg('更新失败: ' + result.msg, { icon: 2, time: 2000 });
+						}
+					},
+					error: function (xhr, status, error) {
+						layer.msg('请求失败: ' + error, { icon: 2, time: 2000 });
+					}
+				});
+			});
 		window.batchRemove = function(obj) {
 			let data = table.checkStatus(obj.config.id).data;
 			if (data.length === 0) {

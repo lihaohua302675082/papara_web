@@ -26,6 +26,13 @@
 			"type": 1,
 			"openType": "_iframe",
 			"href": "/3ds_detail"
+		},{
+			"id": 100,
+			"title": "树形表格",
+			"icon": "layui-icon layui-icon-face-smile",
+			"type": 1,
+			"openType": "_iframe",
+			"href": "/tree_table"
 		}]
 	}
 ]
