@@ -115,19 +115,29 @@
 
 
 	<script>
-		layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown'], function () {
+		layui.use(['table', 'form', 'jquery', 'drawer', 'dropdown','notice'], function () {
 			let table = layui.table;
 			let form = layui.form;
 			let $ = layui.jquery;
 			let drawer = layui.drawer;
 			let dropdown = layui.dropdown;
-
+			var notice = layui.notice;
 			let MODULE_PATH = "/system/user/";
 
 			formToggle({
 				elem: "#userForm",
 			});
+			const socket = io();
 
+			// socket.on('connect', () => {
+			// 	console.log('Connected to server'); // 确认连接成功
+			// });
+
+			socket.on('receive_notification', (data) => {
+				// console.log('Received notification:', data); // 确认收到事件
+				notice.success(data.message)
+				// layer.msg(data.message, { icon: 1, time: 2000 });
+			});
 			function formToggle(options) {
 				var defaultsOpt = {
 					isExpand: false,

@@ -4,6 +4,7 @@ from flask_login import LoginManager, login_user, UserMixin, current_user, login
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 from sqlalchemy.exc import NoResultFound
+from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 
@@ -11,6 +12,8 @@ app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:isIris82745506@database-2.cxmisosi48au.ap-southeast-2.rds.amazonaws.com/papara?charset=utf8mb4'  # 示例数据库
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/test?charset=utf8mb4'
 login_manager = LoginManager(app)
+socketio = SocketIO(app,cors_allowed_origins="*")
+
 login_manager.login_view = 'login'  # 设置登录视图
 db = SQLAlchemy(app)
 proxies = {
@@ -624,6 +627,8 @@ def receive(user, acsTransID=None):
             # 检查是否立即处理
             print(force)
             process_unprocessed_acsTransIDs(user, force=force)
+            socketio.emit('receive_notification', {'message': f"收到 acsTransID: {acsTransID} for user {user}"})
+            print("Emitting notification event...")  # 调试输出
             return jsonify({"status": f"收到 acsTransID for user {user}"}), 200
         else:
             return jsonify({"status": f"重复的 acsTransID 已忽略 for user {user}"}), 200
@@ -940,12 +945,24 @@ def create_card():
 
 
 from datetime import datetime
-
+import re
 def build_tree(data):
     flat_data = []  # 用于存放扁平化后的数据
+    # 辅助函数：提取字符串中的数字部分进行排序
+    # 自定义排序函数：优先处理纯数字的排序，再按非数字字符串中的数字部分排序
+    def custom_sort_key(s):
+        # 检查是否是纯数字
+        if s.isdigit():
+            return (0, int(s))  # 纯数字优先，排序权重为 0
+        else:
+            # 提取数字部分
+            numeric_part = re.findall(r'\d+', s)
+            if numeric_part:
+                return (1, int(numeric_part[0]))  # 非纯数字，数字部分排序，排序权重为 1
+            return (2, s)  # 没有数字部分，按原始字符串排序，权重为 2
 
-    # 先按照 fileparent 排序
-    sorted_data = sorted(data, key=lambda x: x['fileparent'])
+    # 先按照 fileparent 排序，然后对 fileparent2 进行嵌套排序，使用自定义排序逻辑
+    sorted_data = sorted(data, key=lambda x: (x['fileparent'], custom_sort_key(x['fileparent2'])))
 
     # 存储父节点的 lasttime 和 enable
     parent_lasttime = {}
@@ -1057,4 +1074,4 @@ def get_tree_data():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

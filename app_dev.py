@@ -4,7 +4,7 @@ from flask_login import LoginManager, login_user, UserMixin, current_user, login
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 from sqlalchemy.exc import NoResultFound
-
+from flask_socketio import SocketIO, emit
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -12,6 +12,7 @@ app.config[
     'SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://admin:isIris82745506@database-2.cxmisosi48au.ap-southeast-2.rds.amazonaws.com/papara?charset=utf8mb4'  # 示例数据库
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/test?charset=utf8mb4'
 login_manager = LoginManager(app)
+socketio = SocketIO(app,cors_allowed_origins="*")
 login_manager.login_view = 'login'  # 设置登录视图
 db = SQLAlchemy(app)
 
@@ -337,6 +338,9 @@ def add():
 def card_details(device_id):
     return render_template('view/document/card_detail.html', device_id=device_id)
 
+@app.route('/tree_table')
+def tree_table():
+    return render_template('view/document/treetable.html')
 
 # API 接口用于返回卡片数据
 @app.route('/api/card_detail/<string:device_id>', methods=['GET'])
@@ -613,6 +617,7 @@ def receive(user, acsTransID=None):
             # 检查是否立即处理
             print(force)
             process_unprocessed_acsTransIDs(user, force=force)
+            socketio.emit('receive_notification', {'message': f"收到 acsTransID: {acsTransID} for user {user}"})
             return jsonify({"status": f"收到 acsTransID for user {user}"}), 200
         else:
             return jsonify({"status": f"重复的 acsTransID 已忽略 for user {user}"}), 200
